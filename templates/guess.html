@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <style>
+      /* Center the contents of the page */
+      body {
+        display: flex;
+        justify-content: center;
+        align-items: flex-start;
+        min-height: 100vh;
+      }
+      .container {
+        display: flex;
+        justify-content: center; /* center horizontally */
+        align-items: center; /* center vertically */
+        }
+      /* Prevent the <p> tag from clipping off the page */
+      p {
+        word-wrap: break-word;
+      }
+    </style>
+  </head>
+  <body>
+    <img src=static/img/txt2img.png alt="Centered Image">
+    <div class="container">
+        <input type="text" id="guess-input" placeholder="Enter your guess" onkeydown="if(event.keyCode == 13) document.getElementById('guess-button').click()">
+        <button id="guess-button">Guess</button>
+    </div>
+    <p id="prompt_text">{{ prompt }}</p>
+    
+    <script>
+        
+        $('#guess-button').click(function() {
+            var word = $('#guess-input').val()
+            console.log(word)       
+            $.ajax({
+                type: 'POST',
+                url: '/endpoint',
+                data: {"request": "guess", "word": word},
+                success: function(result){
+                    if (result.value) {
+                        console.log("IS IN")
+                        $('#prompt_text').text(result.new_prompt)
+                    } else {
+                        console.log("FALSE")
+                    }
+                }
+            });
+        });
+    </script>
+  </body>
+</html>
+
+
+

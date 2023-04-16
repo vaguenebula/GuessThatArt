@@ -1,0 +1,28 @@
+{% extends "layout.html" %}
+{% block content %}
+    <div id="choose-genre">
+        <h1>Choose a Genre</h1>
+        {% for genre in genres %}
+            <button class="genre-button" value={{genre}}> {{ genre }} </button>
+        {% endfor %} 
+    </div>
+    
+    <div id="result"></div>
+    
+    <script>
+        $('.genre-button').click(function() {
+            var genre = $(this).val();
+            console.log(genre)
+
+            $.ajax({
+                type: 'POST',
+                url: '/endpoint',
+                data: {"request": "choose-genre", "genre": genre},
+                success: function(result){
+                    $('#choose-genre').hide()
+                    $('#result').html(result.html);
+                }
+            });
+        });
+    </script>
+{% endblock content %}
