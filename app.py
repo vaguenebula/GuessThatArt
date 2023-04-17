@@ -5,6 +5,14 @@ import os
 import re
 import requests
 
+with open('stop_words.txt', 'r') as f:
+    stop_words = f.readlines()
+
+stop_words = [word.rstrip() for word in stop_words]
+
+def find_words(string):
+    re.findall(r'\b\w+\b', string)
+
 api_host = os.getenv('API_HOST', 'https://api.stability.ai')
 url = f"{api_host}/v1/user/account"
 
@@ -27,8 +35,15 @@ def string_to_array(text):
     return words
 
 def convert_to_asterisk(string):
-    # Replace all non-symbol characters with an asterisk
-    return re.sub(r'[^\W_]', '*', string)
+    
+    words = re.findall(r'\b\w+\b', string)
+    # find all words (not including symbols) in the paragraph using regex
+
+    for word in words:
+        if word.lower() not in stop_words:
+            string = string.replace(word, '*' * len(word))
+        # replace each word with asterisks of the same length
+    return string
 
 app = Flask(__name__)
 app.secret_key = 'QYLMFqwci9HXf4ZPoG8Jgm4AWZphaMAB'
@@ -43,7 +58,7 @@ genres = [
 
 @app.route("/")
 @app.route("/home")
-def hello():
+def home():
     return render_template('home.html', genres=genres)
 
 @app.route("/about")
@@ -52,15 +67,23 @@ def about():
 
 @app.route('/endpoint', methods=['GET', 'POST'])
 def endpoint():
-    request_type = request.form['request']
+    request_type = request.get_json()['request']
     
     if request_type == 'choose-genre':
-        genre = request.form['genre']
+        genre = request.get_json()['genre']
         my_data = openai.ChatCompletion.create(
             model="gpt-3.5-turbo",
             messages=[
-                    {"role": "system", "content": "You write a prompt to generate art with the provided genre"},
-                    {"role": "user", "content": genre},
+                    {"role": "system", "content": """
+You write a prompt to generate art with the provided genre
+Example:
+landscapes
+Prompt:
+An oil painting of a cathedral in nature, stained glass, trees, mountains in the distance
+                    """},
+                    {"role": "user", "content": f"""
+{genre}
+Prompt:"""},
                 ]
             )
         unknown_string = convert_to_asterisk(my_data['choices'][0]['message']['content'])
@@ -68,7 +91,13 @@ def endpoint():
         session['prompt'] = my_data['choices'][0]['message']['content']
         session['unknowns'] = unknown_string
         session['guesses_left'] = 10
-
+        print(session.get('prompt'))
+        # temp_prompt = "a landscape, with a beautiful river"
+        # unknown_string = convert_to_asterisk(temp_prompt)
+        # session['prompt'] = temp_prompt
+        # session['unknowns'] = unknown_string
+        # session['guesses_left'] = 10
+        session['correct'] = 0
         response = requests.post(
             f"{api_host}/v1/generation/stable-diffusion-v1-5/text-to-image",
             headers={
@@ -91,42 +120,44 @@ def endpoint():
             },
         )
 
-        data = response.json()
-        print(data.keys())
-        print(data['message'])
-        for image in data['message']:
-            with open(f"./static/img/txt2img.png", "wb") as f:
-                f.write(base64.b64decode(image["base64"]))
+        data = response.json()['artifacts'][0]['base64']
+        # for image in data['artifacts']:
+        #     with open(f"./static/img/txt2img.png", "wb") as f:
+        #         f.write(base64.b64decode(image["base64"]))
                 
-        html = render_template('guess.html', prompt=unknown_string)
+        html = render_template('guess.html', prompt=unknown_string, image=f"data:image/png;base64,{data}", guesses=10)
         
         return jsonify({'html':html})
 
 
     if request_type == "guess":
-        session['guesses_left'] -= session['guesses_left'] - 1
-        word = request.form['word']
+        html = None
+        session['guesses_left'] -= 1
+        word = request.get_json()['word']
         prompt = session.get('prompt')
         guesses_left = session.get('guesses_left')
         print(f'{guesses_left} guesses left')
         unknown_prompt = session.get('unknowns')
         prompt_words = string_to_array(prompt)
-        print(prompt_words)
         indices = []
         
         if word in prompt_words:
+            session['correct'] += 1
             index = prompt.find(word)
             while index != -1:
                 indices.append(index)
                 index = prompt.find(word, index + 1)
             for eachIndex in indices:
-
                 unknown_prompt = unknown_prompt[:eachIndex] + word + unknown_prompt[eachIndex + len(word):]
             print(unknown_prompt)
             session['unknowns'] = unknown_prompt
-            return {'value': True, 'new_prompt':unknown_prompt}
+            if guesses_left < 1:
+                html = render_template("gameover.html", correct=4, total=len(prompt_words), prompt=session.get('prompt'))
+            return {'value': True, 'new_prompt':unknown_prompt, 'html': html, 'guesses':session.get('guesses_left')}
         else:
-            return {'value': False}
+            if guesses_left < 1:
+                html = render_template("gameover.html", correct=session.get('correct'), total=len(prompt_words), prompt=session.get('prompt'))
+            return {'value': False, 'html': html, 'guesses':session.get('guesses_left')}
 
     else:
         return None
