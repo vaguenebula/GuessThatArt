@@ -36,15 +36,16 @@ def string_to_array(text):
     return words
 
 def convert_to_asterisk(string):
-    
+    num_of_words = 0
     words = re.findall(r'\b\w+\b', string)
     # find all words (not including symbols) in the paragraph using regex
 
     for word in words:
         if word.lower() not in stop_words:
             string = string.replace(word, '*' * len(word))
+            num_of_words += 1
         # replace each word with asterisks of the same length
-    return string
+    return (string, num_of_words)
 
 app = Flask(__name__)
 app.secret_key = 'QYLMFqwci9HXf4ZPoG8Jgm4AWZphaMAB'
@@ -89,11 +90,13 @@ An oil painting of a cathedral in nature, stained glass, trees, mountains in the
 Prompt:"""},
                 ]
             )
-        unknown_string = convert_to_asterisk(my_data['choices'][0]['message']['content'])
+        unknown_string, num_of_words = convert_to_asterisk(my_data['choices'][0]['message']['content'])
 
         session['prompt'] = my_data['choices'][0]['message']['content']
         session['unknowns'] = unknown_string
         session['guesses_left'] = 10
+        session['num_of_words'] = num_of_words
+
         print(session.get('prompt'))
         # temp_prompt = "a landscape, with a beautiful river"
         # unknown_string = convert_to_asterisk(temp_prompt)
@@ -152,11 +155,11 @@ Prompt:"""},
             print(unknown_prompt)
             session['unknowns'] = unknown_prompt
             if guesses_left < 1:
-                html = render_template("gameover.html", correct=4, total=len(prompt_words), prompt=session.get('prompt'))
+                html = render_template("gameover.html", correct=4, total=session.get('num_of_words'), prompt=session.get('prompt'))
             return {'value': True, 'new_prompt':unknown_prompt, 'html': html, 'guesses':session.get('guesses_left')}
         else:
             if guesses_left < 1:
-                html = render_template("gameover.html", correct=session.get('correct'), total=len(prompt_words), prompt=session.get('prompt'))
+                html = render_template("gameover.html", correct=session.get('correct'), total=session.get('num_of_words'), prompt=session.get('prompt'))
             return {'value': False, 'html': html, 'guesses':session.get('guesses_left')}
 
     else:
