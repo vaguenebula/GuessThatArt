@@ -121,9 +121,6 @@ Prompt:"""},
         )
 
         data = response.json()['artifacts'][0]['base64']
-        # for image in data['artifacts']:
-        #     with open(f"./static/img/txt2img.png", "wb") as f:
-        #         f.write(base64.b64decode(image["base64"]))
                 
         html = render_template('guess.html', prompt=unknown_string, image=f"data:image/png;base64,{data}", guesses=10)
         

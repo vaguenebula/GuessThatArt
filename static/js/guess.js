@@ -1,7 +1,7 @@
 function guessPrompt() {
     var word = document.getElementById('guess-input').value
     console.log(word)
-    if (word !== null){
+    if (word !== ""){
         fetch('/endpoint', {
             method: 'POST',
             headers: {
@@ -14,13 +14,14 @@ function guessPrompt() {
             if (data.value) {
                 document.getElementById('prompt_text').innerHTML = data.new_prompt
                 document.getElementById('guesses').innerHTML = 'Guesses left: ' + data.guesses
+                document.getElementById('guess-input').value = ''
             }
             else {
                 document.getElementById('guesses').innerHTML = 'Guesses left: ' + data.guesses
+                document.getElementById('guess-input').value = ''
             }
             if (data.html !== null) {
                 document.getElementById('result').innerHTML = data.html
-                document.getElementById('guesses').innerHTML = 'Guesses left: ' + data.guesses
             }
         })
     }
