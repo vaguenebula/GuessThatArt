@@ -4,6 +4,7 @@ import openai
 import os
 import re
 import requests
+import random
 
 with open('stop_words.txt', 'r') as f:
     stop_words = f.readlines()
@@ -51,14 +52,16 @@ app.secret_key = 'QYLMFqwci9HXf4ZPoG8Jgm4AWZphaMAB'
 openai.api_key = "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"
 
 genres = [
-    'landscapes',
-    'fantasy',
-    'anime grill'
+    'Landscape',
+    'Fantasy',
+    'Anime',
+    'Cyberpunk'
 ]
 
 @app.route("/")
 @app.route("/home")
 def home():
+    random.shuffle(genres)
     return render_template('home.html', genres=genres)
 
 @app.route("/about")
